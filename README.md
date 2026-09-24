@@ -24,7 +24,7 @@ Works on **Windows**, **macOS**, and **Linux** — anywhere Node.js runs.
 ### Global install
 
 ```bash
-npm install -g @junu1/tag-manager
+npm install -g C:/f1/tag-manager
 ```
 
 ## Usage
