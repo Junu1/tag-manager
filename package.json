@@ -29,7 +29,7 @@
         "url": "https://github.com/Junu1/tag-manager/issues"
     },
     "homepage": "https://github.com/Junu1/tag-manager#readme",
-    "author": "bikal1000",
+    "author": "Junu1",
     "license": "MIT",
     "engines": {
         "node": ">=16.0.0"
