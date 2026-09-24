@@ -1,6 +1,6 @@
 {
-    "name": "@bikal404/tag-manager",
-    "version": "2.0.1",
+    "name": "@junu1/tag-manager",
+    "version": "2.1.0",
     "description": "A cross-platform CLI tool for managing semantic versioning tags in Git repositories with package.json support.",
     "type": "module",
     "bin": {
@@ -23,12 +23,12 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/bikal1000/tag-manager.git"
+        "url": "git+https://github.com/Junu1/tag-manager.git"
     },
     "bugs": {
-        "url": "https://github.com/bikal1000/tag-manager/issues"
+        "url": "https://github.com/Junu1/tag-manager/issues"
     },
-    "homepage": "https://github.com/bikal1000/tag-manager#readme",
+    "homepage": "https://github.com/Junu1/tag-manager#readme",
     "author": "bikal1000",
     "license": "MIT",
     "engines": {

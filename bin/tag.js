@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { Command } from 'commander';
 import chalk from 'chalk';
 
-import { getCurrentVersion, bumpVersion, buildTagName, updatePackageFiles } from '../lib/version.js';
+import { getCurrentVersion, getScheme, bumpVersion, buildTagName, updatePackageFiles } from '../lib/version.js';
 import { ensureGitRepo, ensureCleanWorkingTree, tagExists, createTag, commitFiles, getTagHistory } from '../lib/git.js';
 import { info, success, error, dim, printVersion, promptMenu, confirm, pressEnter, divider, banner } from '../lib/ui.js';
 
@@ -12,7 +12,7 @@ import { info, success, error, dim, printVersion, promptMenu, confirm, pressEnte
 
 /**
  * Execute a version bump: update files, commit, and create a git tag.
- * @param {'major'|'minor'|'patch'|'hotfix'} type
+ * @param {'product'|'major'|'minor'|'patch'|'maintenance'|'hotfix'} type
  * @param {object} options
  * @param {string}  [options.prefix]       Optional project prefix
  * @param {boolean} [options.skipConfirm]  Skip the confirmation prompt
@@ -103,10 +103,11 @@ async function interactiveMode() {
     while (true) {
         console.clear();
         banner('Tag Manager');
-        printVersion('Current version:', getCurrentVersion());
+        const currentVersion = getCurrentVersion();
+        printVersion('Current version:', currentVersion);
         console.log('');
 
-        const action = await promptMenu();
+        const action = await promptMenu(getScheme(currentVersion));
 
         if (action === 'exit') {
             console.log('');
@@ -121,7 +122,7 @@ async function interactiveMode() {
             continue;
         }
 
-        // major, minor, patch, or hotfix
+        // a bump level from the current version's scheme
         await doBump(action, { skipConfirm: false });
         await pressEnter();
     }
@@ -129,32 +130,32 @@ async function interactiveMode() {
 
 // ─── CLI definition ──────────────────────────────────────────────────
 
+const { version: CLI_VERSION } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
 const program = new Command();
 
 program
     .name('tag')
     .description('A cross-platform CLI for managing semantic versioning tags in Git repositories.')
-    .version('2.0.0', '-v, --version', 'Display the CLI version');
+    .version(CLI_VERSION, '-v, --version', 'Display the CLI version');
 
-program
-    .command('major [prefix]')
-    .description('Bump major version (X.0.0) — breaking changes')
-    .action((prefix) => doBump('major', { prefix, skipConfirm: true }));
+// 3-digit versions use: major, minor, patch
+// 5-digit versions use: product, major, minor, maintenance, hotfix
+const BUMP_COMMANDS = [
+    ['product', 'Bump product version (X.0.0.0.0) — 5-digit only'],
+    ['major', 'Bump major version (X.0.0 or x.X.0.0.0) — breaking changes'],
+    ['minor', 'Bump minor version (x.X.0 or x.x.X.0.0) — new features'],
+    ['patch', 'Bump patch version (x.x.X) — 3-digit only'],
+    ['maintenance', 'Bump maintenance version (x.x.x.X.0) — 5-digit only'],
+    ['hotfix', 'Bump hotfix version (x.x.x.x.X) — 5-digit only'],
+];
 
-program
-    .command('minor [prefix]')
-    .description('Bump minor version (x.X.0) — new features')
-    .action((prefix) => doBump('minor', { prefix, skipConfirm: true }));
-
-program
-    .command('patch [prefix]')
-    .description('Bump patch version (x.x.X) — bug fixes')
-    .action((prefix) => doBump('patch', { prefix, skipConfirm: true }));
-
-program
-    .command('hotfix [prefix]')
-    .description('Bump hotfix version (x.x.x.X) — quick fixes')
-    .action((prefix) => doBump('hotfix', { prefix, skipConfirm: true }));
+for (const [type, description] of BUMP_COMMANDS) {
+    program
+        .command(`${type} [prefix]`)
+        .description(description)
+        .action((prefix) => doBump(type, { prefix, skipConfirm: true }));
+}
 
 program
     .command('history')
