@@ -13,16 +13,17 @@ import { info, success, error, dim, printVersion, promptMenu, confirm, pressEnte
 /**
  * Execute a version bump: update files, commit, and create a git tag.
  * @param {'product'|'major'|'minor'|'patch'|'maintenance'|'hotfix'} type
+ * @param {3|5} digits  Digit count of the new version
  * @param {object} options
  * @param {string}  [options.prefix]       Optional project prefix
  * @param {boolean} [options.skipConfirm]  Skip the confirmation prompt
  */
-async function doBump(type, { prefix, skipConfirm = false } = {}) {
+async function doBump(type, digits, { prefix, skipConfirm = false } = {}) {
     ensureGitRepo();
     ensureCleanWorkingTree();
 
     const currentVersion = getCurrentVersion();
-    const newVersion = bumpVersion(type, currentVersion);
+    const newVersion = bumpVersion(type, currentVersion, digits);
     const tagName = buildTagName(newVersion, prefix);
 
     // Ensure the tag doesn't already exist
@@ -107,7 +108,10 @@ async function interactiveMode() {
         printVersion('Current version:', currentVersion);
         console.log('');
 
-        const action = await promptMenu(getScheme(currentVersion));
+        const action = await promptMenu([
+            { digits: 3, levels: getScheme(3) },
+            { digits: 5, levels: getScheme(5) },
+        ]);
 
         if (action === 'exit') {
             console.log('');
@@ -122,8 +126,7 @@ async function interactiveMode() {
             continue;
         }
 
-        // a bump level from the current version's scheme
-        await doBump(action, { skipConfirm: false });
+        await doBump(action.type, action.digits, { skipConfirm: false });
         await pressEnter();
     }
 }
@@ -137,24 +140,20 @@ const program = new Command();
 program
     .name('tag')
     .description('A cross-platform CLI for managing semantic versioning tags in Git repositories.')
-    .version(CLI_VERSION, '-v, --version', 'Display the CLI version');
+    .version(CLI_VERSION, '-v, --version', 'Display the CLI version')
+    .argument('[prefix]', 'Optional project prefix for --major/--minor/--patch');
 
-// 3-digit versions use: major, minor, patch
-// 5-digit versions use: product, major, minor, maintenance, hotfix
-const BUMP_COMMANDS = [
-    ['product', 'Bump product version (X.0.0.0.0) — 5-digit only'],
-    ['major', 'Bump major version (X.0.0 or x.X.0.0.0) — breaking changes'],
-    ['minor', 'Bump minor version (x.X.0 or x.x.X.0.0) — new features'],
-    ['patch', 'Bump patch version (x.x.X) — 3-digit only'],
-    ['maintenance', 'Bump maintenance version (x.x.x.X.0) — 5-digit only'],
-    ['hotfix', 'Bump hotfix version (x.x.x.x.X) — 5-digit only'],
-];
+// 3-digit bumps are flags: tag --major | --minor | --patch [prefix]
+for (const level of getScheme(3)) {
+    program.option(`--${level.type}`, `Bump ${level.type} version (${level.pattern}) — 3-digit`);
+}
 
-for (const [type, description] of BUMP_COMMANDS) {
+// 5-digit bumps are subcommands: tag product | major | minor | maintenance | hotfix [prefix]
+for (const level of getScheme(5)) {
     program
-        .command(`${type} [prefix]`)
-        .description(description)
-        .action((prefix) => doBump(type, { prefix, skipConfirm: true }));
+        .command(`${level.type} [prefix]`)
+        .description(`Bump ${level.type} version (${level.pattern}) — 5-digit`)
+        .action((prefix) => doBump(level.type, 5, { prefix, skipConfirm: true }));
 }
 
 program
@@ -162,7 +161,19 @@ program
     .description('View recent version history')
     .action(() => doHistory());
 
-// If no subcommand is provided, run interactive mode
-program.action(() => interactiveMode());
+// No subcommand: run a 3-digit bump if a flag was given, otherwise interactive mode
+program.action((prefix, options) => {
+    const flags = getScheme(3).filter((level) => options[level.type]);
+    if (flags.length > 1) {
+        error('Use only one of --major, --minor or --patch.');
+        process.exit(1);
+    }
+    if (flags.length === 1) return doBump(flags[0].type, 3, { prefix, skipConfirm: true });
+    if (prefix) {
+        error(`Unknown command "${prefix}". Run "tag --help" for usage.`);
+        process.exit(1);
+    }
+    return interactiveMode();
+});
 
 program.parse();

@@ -7,8 +7,8 @@ Works on **Windows**, **macOS**, and **Linux** — anywhere Node.js runs.
 ## Features
 
 - 🎯 **Interactive mode** — menu-driven interface for quick tagging
-- ⚡ **Command-line mode** — direct version bumping via subcommands
-- 📦 **Two versioning schemes** — 3-digit `Major.Minor.Patch` or 5-digit `Product.Major.Minor.Maintenance.Hotfix`, detected from `package.json`
+- ⚡ **Command-line mode** — `--major`/`--minor`/`--patch` flags for 3-digit tags, subcommands for 5-digit tags
+- 📦 **Two versioning schemes** — 3-digit `Major.Minor.Patch` or 5-digit `Product.Major.Minor.Maintenance.Hotfix`, chosen by the command you run
 - 🏗️ **Project prefix** — optional prefix for monorepo/multi-project tags (e.g., `xp-v1.0.0.0.0`)
 - 📝 **Auto-updates** `package.json` and `package-lock.json`
 - 🔖 **Git tag creation** — annotated tags with automatic commit
@@ -37,17 +37,22 @@ Run without any arguments to launch the interactive menu:
 tag
 ```
 
-The menu matches your current version's scheme. For a 5-digit version:
+The menu lists both schemes:
 
 ```
 ──────────────────────────────────────────────────
   🏷️  Tag Manager
 ──────────────────────────────────────────────────
 
-Current version: 1.0.0.0.0
+Current version: 1.0.0
 
 ? Select an action:
-  ❯ Product     (X.0.0.0.0) — New product line
+  ── 3-digit ──
+  ❯ Major       (X.0.0) — Breaking changes
+    Minor       (x.X.0) — New features
+    Patch       (x.x.X) — Bug fixes
+  ── 5-digit ──
+    Product     (X.0.0.0.0) — New product line
     Major       (x.X.0.0.0) — Breaking changes
     Minor       (x.x.X.0.0) — New features
     Maintenance (x.x.x.X.0) — Bug fixes
@@ -57,61 +62,49 @@ Current version: 1.0.0.0.0
     Exit
 ```
 
-For a 3-digit version it shows `Major (X.0.0)`, `Minor (x.X.0)` and `Patch (x.x.X)` instead.
-
-### Versioning schemes
-
-The scheme is picked from the number of digits in `package.json`'s `version`,
-and new versions keep the same number of digits:
-
-| Digits | Format                                          | Bumps                                               |
-| ------ | ----------------------------------------------- | --------------------------------------------------- |
-| 3      | `<Major>.<Minor>.<Patch>`                       | `major`, `minor`, `patch`                           |
-| 5      | `<Product>.<Major>.<Minor>.<Maintenance>.<Hotfix>` | `product`, `major`, `minor`, `maintenance`, `hotfix` |
-
-Legacy 4-digit versions (e.g. `1.0.1.2`) are treated as 5-digit with a trailing `0`
-(`1.0.1.2.0`), so they move to the 5-digit scheme on the next bump. Other formats
-are rejected. Using a bump that doesn't belong to
-the current scheme (e.g. `tag hotfix` on `1.2.3`) is an error.
-
-Each bump increments its own digit and resets every digit after it to `0`
-(Customized Git Flow SOP). For example:
-
-| Bump          | From `1.2.3` | From `2.3.4.5.6` |
-| ------------- | ------------ | ---------------- |
-| `product`     | —            | `3.0.0.0.0`      |
-| `major`       | `2.0.0`      | `2.4.0.0.0`      |
-| `minor`       | `1.3.0`      | `2.3.5.0.0`      |
-| `patch`       | `1.2.4`      | —                |
-| `maintenance` | —            | `2.3.4.6.0`      |
-| `hotfix`      | —            | `2.3.4.5.7`      |
-
 ### Command-Line Mode
 
-For direct version bumping, use subcommands:
+Flags create **3-digit** tags, subcommands create **5-digit** tags:
 
 ```bash
-# 3-digit versions
-tag major        # Bump major version (X.0.0)
-tag minor        # Bump minor version (x.X.0)
-tag patch        # Bump patch version (x.x.X)
+# 3-digit: <Major>.<Minor>.<Patch>
+tag --major      # X.0.0
+tag --minor      # x.X.0
+tag --patch      # x.x.X
 
-# 5-digit versions
-tag product      # Bump product version (X.0.0.0.0)
-tag major        # Bump major version (x.X.0.0.0)
-tag minor        # Bump minor version (x.x.X.0.0)
-tag maintenance  # Bump maintenance version (x.x.x.X.0)
-tag hotfix       # Bump hotfix version (x.x.x.x.X)
+# 5-digit: <Product>.<Major>.<Minor>.<Maintenance>.<Hotfix>
+tag product      # X.0.0.0.0
+tag major        # x.X.0.0.0
+tag minor        # x.x.X.0.0
+tag maintenance  # x.x.x.X.0
+tag hotfix       # x.x.x.x.X
 
 tag history      # View recent version history
 ```
+
+### How versions are calculated
+
+The current `package.json` version (3, 4 or 5 digits) is first fitted to the
+chosen scheme: extra digits are dropped, missing digits are `0`. Then the chosen
+digit is incremented and every digit after it resets to `0` (Customized Git Flow SOP).
+
+| Command           | From `1.2.3`  | From `2.3.4.5.6` |
+| ----------------- | ------------- | ---------------- |
+| `tag --major`     | `2.0.0`       | `3.0.0`          |
+| `tag --minor`     | `1.3.0`       | `2.4.0`          |
+| `tag --patch`     | `1.2.4`       | `2.3.5`          |
+| `tag product`     | `2.0.0.0.0`   | `3.0.0.0.0`      |
+| `tag major`       | `1.3.0.0.0`   | `2.4.0.0.0`      |
+| `tag minor`       | `1.2.4.0.0`   | `2.3.5.0.0`      |
+| `tag maintenance` | `1.2.3.1.0`   | `2.3.4.6.0`      |
+| `tag hotfix`      | `1.2.3.0.1`   | `2.3.4.5.7`      |
 
 ### Project Prefix
 
 Add an optional project prefix to scope tags for monorepos:
 
 ```bash
-tag patch api       # 1.0.0     → api-v1.0.1
+tag --patch api     # 1.0.0     → api-v1.0.1
 tag maintenance xp  # 1.0.0.0.0 → xp-v1.0.0.1.0
 ```
 
@@ -137,9 +130,9 @@ If you were using the original bash script, the CLI arguments have changed sligh
 
 | Bash (v1)         | Node.js (v2)    |
 | ----------------- | --------------- |
-| `tag --major`     | `tag major`     |
-| `tag --minor`     | `tag minor`     |
-| `tag --minor xp`  | `tag minor xp`  |
+| `tag --major`     | `tag --major`   |
+| `tag --minor`     | `tag --minor`   |
+| `tag --minor xp`  | `tag --minor xp` |
 | `tag --history`   | `tag history`   |
 | `tag` (no args)   | `tag` (no args) |
 
