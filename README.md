@@ -69,7 +69,9 @@ and new versions keep the same number of digits:
 | 3      | `<Major>.<Minor>.<Patch>`                       | `major`, `minor`, `patch`                           |
 | 5      | `<Product>.<Major>.<Minor>.<Maintenance>.<Hotfix>` | `product`, `major`, `minor`, `maintenance`, `hotfix` |
 
-Other formats (e.g. `1.2.3.4`) are rejected. Using a bump that doesn't belong to
+Legacy 4-digit versions (e.g. `1.0.1.2`) are treated as 5-digit with a trailing `0`
+(`1.0.1.2.0`), so they move to the 5-digit scheme on the next bump. Other formats
+are rejected. Using a bump that doesn't belong to
 the current scheme (e.g. `tag hotfix` on `1.2.3`) is an error.
 
 Each bump increments its own digit and resets every digit after it to `0`
