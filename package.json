@@ -1,5 +1,5 @@
 {
-    "name": "tag-manager",
+    "name": "git-tag-manager",
     "version": "2.1.0",
     "description": "A cross-platform CLI tool for managing semantic versioning tags in Git repositories with package.json support.",
     "type": "module",
